@@ -1,0 +1,104 @@
+GROMACS 
+
+Protein in simple water simulation-stepwise protocol
+
+Protein name: 1iyt (one molecule selected out of 10 from NMR)
+
+Step1: Making gromacs topology
+
+/usr/local/gromacs//bin/gmx pdb2gmx -f 1iyt.pdb  -water spce -ignh
+
+Step2: Defining simulation box 
+
+/usr/local/gromacs//bin/gmx editconf -f conf.gro -o box.gro -c -d 0.4 -bt cubic
+
+Step3: Solvating the box with SPC water
+
+/usr/local/gromacs//bin/gmx solvate -cp box.gro -cs spc216.gro -o waterbox.gro -p topol.top
+
+Step4: Adding counterions and other ions to the simulation box
+
+/usr/local/gromacs//bin/gmx grompp -f ions.mdp -c waterbox.gro -p topol.top -o ions.tpr -maxwarn 2
+        
+/usr/local/gromacs//bin/gmx genion -s ions.tpr -o solvated.gro -p topol.top -pname NA -nname CL -neutral -conc 0.15
+
+Step5: Preparing the system for energy minimization
+
+/usr/local/gromacs//bin/gmx grompp -f em.mdp -c solvated.gro -p topol.top -o em.tpr -maxwarn 2
+
+Step6: Energy minimization
+
+/usr/local/gromacs//bin/gmx mdrun -v -deffnm em 
+
+Step7: Preparing the system for NVT equilibration 
+
+/usr/local/gromacs//bin/gmx grompp -f nvt.mdp -c em.gro -p topol.top -o nvt.tpr -r em.gro -maxwarn 2
+
+Step8: NVT equilibration
+
+/usr/local/gromacs//bin/gmx mdrun -deffnm nvt -v
+
+Step9: Preparing the system for NPT equilibration
+
+/usr/local/gromacs//bin/gmx grompp -f npt.mdp -c nvt.gro -t nvt.cpt -p topol.top -o npt.tpr -r em.gro -maxwarn 2
+
+Step10: NPT equilibration
+
+/usr/local/gromacs//bin/gmx mdrun -deffnm npt -v
+
+Step11: Preparing the system for MD run
+
+/usr/local/gromacs/bin/gmx grompp -f md.mdp -c npt.gro -t npt.cpt -p topol.top -o 1iyt_md.tpr -maxwarn 2
+
+Step12: MD run
+
+/usr/local/gromacs//bin/gmx mdrun -deffnm 1iyt_md -v
+
+
+
+Extend cmd
+
+/usr/local/gromacs/bin/gmx convert-tpr -s 1iyt_md.tpr -extend 3000 -o 1iyt_md_5ns.tpr
+
+/usr/local/gromacs/bin/gmx mdrun -cpi 1iyt_md.cpt -deffnm 1iyt_md_5ns -v -noappend
+
+
+
+Result analysis from simulation trajectories
+
+Trjcat:
+
+/usr/local/gromacs/bin/gmx trjcat -f 1iyt_md.xtc 1iyt_md_5ns.part0002.xtc -o 1iyt_md_0-5ns_trjcat.xtc
+
+
+Removing periodicities in the trajectories
+
+/usr/local/gromacs/bin/gmx trjconv -s 1iyt_md_5ns.tpr -f 1iyt_md_0-5ns_trjcat.xtc -o 1iyt_md_noPBC.pdb -pbc cluster
+
+when prompted give 1,1
+
+RMSD: Root Mean Square Deviation
+
+/usr/local/gromacs/bin/gmx rms -s 1iyt_md_5ns.tpr -f 1iyt_md_noPBC.pdb -o rmsd_1iyt_md.xvg -tu ns
+
+when prompted give 4,4 for backbone
+
+
+RMSF: Root Mean Square Fluctuation
+
+/usr/local/gromacs/bin/gmx rmsf -s 1iyt_md_5ns.tpr -f 1iyt_md_noPBC.pdb -o rmsf_1iyt_md.xvg -res 
+
+when prompted give 3 
+
+Gyrate: Radius of Gyration
+
+/usr/local/gromacs/bin/gmx gyrate -s 1iyt_md_5ns.tpr -f 1iyt_md_noPBC.pdb -o gyrate_1iyt_md.xvg
+
+when prompted give 1,1 
+
+hbonds: Hydrogen Bonds
+
+/usr/local/gromacs/bin/gmx hbond -s 1iyt_md_5ns.tpr -f 1iyt_md_noPBC.pdb -num hbond_1iyt_md.xvg
+
+when prompted give 1,1 
+
